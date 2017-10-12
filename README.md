@@ -291,7 +291,7 @@ def Get_Symbols(Positions,Reel):
     return(Window)
 ```
 
-```
+```Python
 #returns random stop        
 def Get_Stop(ReelLength):
     return(rd.randint(0,ReelLength))
