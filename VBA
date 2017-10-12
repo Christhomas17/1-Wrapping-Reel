@@ -1,0 +1,208 @@
+```
+Public srcBook As Workbook
+Public tgtbook As Workbook
+Public dataBook As Workbook
+
+Public srcBookName As String
+Public tgtBookName As String
+
+'this sub combines the 2 subs below in order to calculate the math for all 70+ files
+sub theSubToEndThemAll()
+for i = 1 to 16
+
+	call copySheets
+
+	'There are actually only 3 that need to be called but the 4th one needs to be opened so this calls all 4
+	for a = 1 to 4
+		call openAndCopy
+		
+	next a	
+
+next i
+
+
+'This sub will take my math sheet and a developer sheet, will update my math sheet to the next name in a list, open the 
+'corresonding developer sheet, copy over the one sheet that needs to be updated, change calculations to semiautomatic(automatic 
+'will calculate datatables which will make this process take hours), change calculations back to manual(sometimes when pasting, Excel 
+'starts to calculate the datatables and will freeze up so this step in sometimes necessary), and will copy the developr results as well
+' as my calculated results to a common sheet in order to compare
+Sub openAndCopy()
+
+'these will make the copying faster
+Application.Calculation = xlManual
+Application.ScreenUpdating = False
+Application.DisplayAlerts = False
+Application.CalculateBeforeSave = False
+
+Dim newbookname As String
+
+Call DefineBooks
+
+Index = 1
+For i = 1 To 4
+    newbookname = dataBook.Sheets("Data").Range("A2:A75"). _
+	Find(srcBookName).Offset(Index).Value
+    
+    dgeName = "DGE - " & newbookname & ".xlsm"
+    srcBookName = newbookname
+    
+    tgtbook.SaveAs (ThisWorkbook.Path & "\" & dgeName)
+    
+        
+    Set tgtbook = Workbooks(dgeName)
+
+    srcBook.Saved = True
+    srcBook.Close
+    
+    Set srcBook = Workbooks.Open(ThisWorkbook.Path & "\" _
+	& srcBookName & ".xlsb")
+    
+    tgtbook.Sheets("Summary").Delete
+        srcBook.Sheets("Summary").copy Before:=tgtbook.Sheets(1)
+        
+    Dim outputRow As Integer
+        outputRow = dataBook.Sheets("Data").Range("A2:A75").Find(srcBookName).Cells.Row
+    
+    srcBook.Sheets("Summary").Range("D15:H15").copy
+    dataBook.Sheets("data").Cells(outputRow, 5).Offset(0).PasteSpecial _
+        paste:=xlPasteValues, Transpose:=False
+    
+    Application.Calculation = xlCalculationSemiautomatic
+    Application.Calculation = xlCalculationManual
+
+    tgtbook.Sheets("DGESummary").Range("Y31:Ac31").copy
+    dataBook.Sheets("data").Cells(outputRow, 11).Offset(0).PasteSpecial _
+        paste:=xlPasteValues, Transpose:=False
+    
+    tgtbook.Sheets("Cover Sheet").Activate
+    tgtbook.Save
+    
+Next i
+
+dataBook.Sheets("data").Activate
+Application.Calculation = xlCalculationSemiautomatic
+Application.Calculation = xlCalculationManual
+
+End Sub
+
+Sub DefineBooks()
+Dim book As Workbook
+
+For Each book In Workbooks
+    'Debug.Print (Left(book.Name, 1))
+    If Left(book.Name, 3) = "AVV" Then
+        Set srcBook = book
+        srcBookName = Split(book.Name, ".")(0)
+        'Debug.Print (srcBook.Name)
+    End If
+    
+    If Left(book.Name, 3) = "DGE" Then
+        Set tgtbook = book
+        tgtBookName = Split(book.Name, ".")(0)
+        'Debug.Print (tgtbook.Name)
+    End If
+    
+    If Left(book.Name, 1) = "O" Then
+        Set dataBook = book
+    End If
+Next book
+
+End Sub
+
+'This sub is very similiar to the one up top but this is going to take 2 previously open workbooks, and copy multiple sheets from one to 
+'the other. It will then change calculations to automatic to allow for the datatables to run
+Sub CopySheets()
+
+Call DefineBooks
+
+numSheetsToCopy = 46
+
+'these will make the copying faster
+Application.Calculation = xlManual
+Application.ScreenUpdating = False
+Application.DisplayAlerts = False
+
+Dim firstRange As Range
+    Set firstRange = dataBook.Sheets("CopyRanges").Range("i7")
+
+'loops through all of the sheet names and copies them from the developer
+'workbooks to my math workbooks
+For Index = 0 To numSheetsToCopy - 1
+    
+    tgtbook.Sheets(firstRange.Offset(Index).Value).Delete
+    srcBook.Sheets(firstRange.Offset(Index).Value).copy _
+        after:=tgtbook.Sheets(Sheets.Count)
+    tgtbook.Sheets(firstRange.Offset(Index).Value).Activate
+        'it was easiest to use VBA to calcualte probabilities for each sheet
+        If Right(firstRange.Offset(Index).Value, 5) = "Picks" Then
+            Call calcProbs
+        End If
+Next Index
+
+Dim outputRow As Integer
+    outputRow = dataBook.Sheets("Data").Range("A2:A75").Find(srcBookName).Cells.Row
+    
+srcBook.Sheets("Summary").Range("D15:H15").copy
+dataBook.Sheets("data").Cells(outputRow, 5).Offset(i).PasteSpecial _
+    paste:=xlPasteValues, Transpose:=False
+    
+'Application.Calculation = xlCalculationAutomatic
+'Application.Calculation = xlCalculationManual
+
+Application.Calculation = xlCalculationSemiautomatic
+Application.Calculation = xlCalculationManual
+
+
+
+Application.Calculation = xlCalculationSemiautomatic
+Application.Calculation = xlCalculationManual
+
+tgtbook.Sheets("Main").Activate
+
+Application.Calculation = xlCalculationAutomatic
+
+Application.Calculation = xlCalculationManual
+
+tgtbook.Sheets("DGESummary").Range("Y31:Ac31").copy
+dataBook.Sheets("data").Cells(outputRow, 11).Offset(i).PasteSpecial _
+    paste:=xlPasteValues, Transpose:=False
+
+Application.Calculation = xlCalculationManual
+
+End Sub
+
+'The developer provides weighted tables. Since I am replacing all of the sheets using VBA, I had to use
+'indirect formulas so it was much easier to have VBA calculate the probs and reference these rather than using 
+'indirect formulas within the formulas that needed these weights
+Sub calcProbs()
+
+Dim ws As Worksheet
+Set ws = ActiveWorkbook.ActiveSheet
+
+On Error GoTo getout
+
+firstRow = 9
+firstCol = 3
+colOffset = 5
+
+
+For col = 0 To 89
+
+    For i = 0 To 19
+        ws.Cells(firstRow + 30 + i, firstCol + col * colOffset).Value = ws.Cells(firstRow + i, firstCol + col * colOffset).Value
+        ws.Cells(firstRow + 30 + i, firstCol + 1 + col * colOffset).Value = _
+             ws.Cells(firstRow + i, firstCol + 1 + col * colOffset) / Application.WorksheetFunction.Sum(Range(ws.Cells(firstRow, firstCol + 1 + col * colOffset), ws.Cells(firstRow + 20, firstCol + 1 + col * colOffset)))
+    
+    Next i
+Next col
+
+Done:
+    Exit Sub
+
+getout:
+    Exit Sub
+End Sub
+
+
+
+
