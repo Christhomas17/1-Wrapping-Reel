@@ -1,11 +1,6 @@
 # 1-Wrapping-Reel
 Slot Machine With 1 Reel Set that "Wraps Around" To Fill 5 Reels
 
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jun 22 10:20:52 2017
-@author: Chris Thomas
-"""
 
 This is a slot machine game that uses 1 single reel strip. The strip wraps
 around from reel 1-5.
